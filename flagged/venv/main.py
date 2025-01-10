@@ -17,38 +17,76 @@ def open_image():
         draw = ImageDraw.Draw(img_original)
         img_display = ImageTk.PhotoImage(img)
         canvas.create_image(0, 0, anchor="nw", image=img_display)
-
-# Function to add text at a specific location
 def add_text(x, y):
     text = text_entry.get()
     text_color = color_var.get()
     bg_color = bg_color_var.get()
     size = int(size_entry.get())
 
-      # Create font for PIL and canvas
+    # Create font for PIL and canvas
     font_style = ImageFont.truetype("arial.ttf", size)
     canvas_font = ("Arial", size)
 
-    # Calculate text bounding box for background
-    bbox = font_style.getbbox(text)
-    width, height = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    # Create a temporary text to measure its size
+    temp_text = canvas.create_text(0, 0, text=text, font=canvas_font, anchor="nw")
+    text_bbox = canvas.bbox(temp_text)  # Get the bounding box of the text
+    canvas.delete(temp_text)  # Remove the temporary text
 
-      # Create background rectangle
-    bg_rect = canvas.create_rectangle(
-        x, y, x + width + 19, y + height + 20,  # Add padding
+    # Calculate text dimensions
+    text_width = text_bbox[2] - text_bbox[0]
+    text_height = text_bbox[3] - text_bbox[1]
+
+    # Add consistent padding around the text
+    padding_x = 10  # Horizontal padding
+    padding_y = 5   # Vertical padding
+
+    # Coordinates for the cloud's bounding area
+    cloud_left = x - padding_x
+    cloud_top = y - padding_y
+    cloud_right = x + text_width + padding_x
+    cloud_bottom = y + text_height + padding_y
+
+    # Create the cloud shape
+    cloud_radius = 10  # Radius for cloud-like curves
+    steps = [
+        # Top-left corner
+        (cloud_left, cloud_top, cloud_left + 2 * cloud_radius, cloud_top + 2 * cloud_radius),
+        # Top-right corner
+        (cloud_right - 2 * cloud_radius, cloud_top, cloud_right, cloud_top + 2 * cloud_radius),
+        # Bottom-left corner
+        (cloud_left, cloud_bottom - 2 * cloud_radius, cloud_left + 2 * cloud_radius, cloud_bottom),
+        # Bottom-right corner
+        (cloud_right - 2 * cloud_radius, cloud_bottom - 2 * cloud_radius, cloud_right, cloud_bottom),
+    ]
+
+    # Draw rounded parts of the cloud
+    for step in steps:
+        canvas.create_oval(step, fill=bg_color, outline="")
+
+    # Draw the straight parts of the cloud
+    canvas.create_rectangle(
+        cloud_left + cloud_radius, cloud_top, cloud_right - cloud_radius, cloud_bottom,
+        fill=bg_color, outline=""
+    )
+    canvas.create_rectangle(
+        cloud_left, cloud_top + cloud_radius, cloud_right, cloud_bottom - cloud_radius,
         fill=bg_color, outline=""
     )
 
-    # Draw the text
+    # Draw the text on the canvas
     canvas_text = canvas.create_text(
-        x + 5, y + 2,  # Add padding to center text
+        x, y,
         text=text, fill=text_color, font=canvas_font, anchor="nw"
     )
 
-     # Store the text box details, including background
+    # Store the text box details, including the cloud
     text_boxes[canvas_text] = {
-        "text": text, "text_color": text_color, "bg_color": bg_color,
-        "size": size, "font": font_style, "bg_rect": bg_rect
+        "text": text,
+        "text_color": text_color,
+        "bg_color": bg_color,
+        "size": size,
+        "font": font_style,
+        "cloud_radius": cloud_radius,
     }
 
 # Function to handle right-click to add text
